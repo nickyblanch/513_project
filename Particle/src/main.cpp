@@ -7,8 +7,8 @@
 // Just like before, we're going to start by declaring which pins everything is plugged into.
 
 // Arduino library
-#include "stdio.h"
-#include "arduino.h"
+// #include "stdio.h"
+// #include "arduino.h"
 
 int led = D0; // This is where your LED is plugged in. The other side goes to a resistor connected to GND.
 int boardLed = D7; // This is the LED that is already on your device.
