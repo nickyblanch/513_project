@@ -1,0 +1,10 @@
+{
+    "extensions.ignoreRecommendations": true,
+    "C_Cpp.default.configurationProvider": "particle.particle-vscode-core",
+    "files.associations": {
+        "*.ino": "cpp"
+    },
+    "particle.firmwareVersion": "1.4.4",
+    "particle.targetPlatform": "argon",
+    "particle.targetDevice": "e00fce68cb99e1d08b21a76a"
+}
