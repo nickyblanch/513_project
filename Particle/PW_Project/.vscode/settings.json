@@ -6,5 +6,6 @@
     },
     "particle.firmwareVersion": "1.4.4",
     "particle.targetPlatform": "argon",
-    "particle.targetDevice": "e00fce68cb99e1d08b21a76a"
+    "particle.targetDevice": "e00fce68cb99e1d08b21a76a",
+    "nrf-connect.toolchain.path": "${nrf-connect.toolchain:2.1.1}"
 }
