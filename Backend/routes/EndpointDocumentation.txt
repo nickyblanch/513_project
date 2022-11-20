@@ -93,7 +93,6 @@ Method: POST
 Description: Gets data for all patients associated with physician
 Expects:
 Physician's JWT in "x-auth" header
-physician: Physician's fullname
 Returns:
 500 if Internal Server Error
 401 if Invalid Authentication
@@ -104,7 +103,6 @@ Method: POST
 Description: Gets data for single patient associated with physician
 Expects:
 Physician's JWT in "x-auth" header
-physician: Physician's fullname
 email: User's email
 Returns:
 500 if Internal Server Error

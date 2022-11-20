@@ -7,7 +7,7 @@ const fs = require('fs');
 // On AWS ec2, you can use to store the secret in a separate file. 
 // The file should be stored outside of your code directory. 
 // For encoding/decoding JWT
-const secretKey = fs.readFileSync(__dirname + '/../keys/physiciankey').toString();
+const physicianKey = fs.readFileSync(__dirname + '/../keys/physiciankey').toString();
 
 var router = express.Router();
 
@@ -53,7 +53,7 @@ router.post("/loginPhysician", function(req, res) {
         else if (physician) {
             if (req.body.password === physician.password) {
                 //Send back a token that contains the user's username
-                const token = jwt.encode({username: req.body.email}, secretKey);
+                const token = jwt.encode({username: req.body.email}, physicianKey);
                 return res.status(200).json({ token: token });
             }
             else {
@@ -75,7 +75,7 @@ router.post('/getPhysicianData', function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
+        decoded = jwt.decode(token, physicianKey);
         //Find the physician in the database
         Physician.findOne({email: {$eq: decoded.username}}, function(err, physician) {
             if (err) {
@@ -100,19 +100,26 @@ router.post('/physicianGetAllPatientData', function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
-        //Find all users assigned to the physician in the database
-        User.find({physician: {$eq: req.body.physician}}, function(err, users) {
+        decoded = jwt.decode(token, physicianKey);
+        Physician.findOne({email: {$eq: decoded.username}}, function(err, physician) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else {
-                res.status(200).send(users);  
+                //Find all users assigned to the physician in the database
+                User.find({physician: {$eq: physician.fullname}}, function(err, users) {
+                    if (err) {
+                        return res.status(500).send(err);
+                    }
+                    else {
+                        return res.status(200).send(users);  
+                    }
+                });
             }
         });
     }
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        return res.status(401).json({error: "Invalid JWT"});
     }
 });
 
@@ -125,19 +132,26 @@ router.post('/physicianGetSinglePatientData', function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
-        //Find one user assigned to the physician in the database
-        User.findOne({$and: [{physician: {$eq: req.body.physician}}, {email: {$eq: req.body.email}}]}, function(err, user) {
+        decoded = jwt.decode(token, physicianKey);
+        Physician.findOne({email: {$eq: decoded.username}}, function(err, physician) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else {
-                res.status(200).send(user);
+                //Find the particular user assigned to the physician in the database
+                User.findOne({$and: [{physician: {$eq: physician.fullname}}, {email: {$eq: req.body.email}}]}, function(err, user) {
+                    if (err) {
+                        return res.status(500).send(err);
+                    }
+                    else {
+                        return res.status(200).send(user);
+                    }
+                });
             }
         });
     }
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        return res.status(401).json({error: "Invalid JWT"});
     }
 });
 
