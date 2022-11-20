@@ -147,7 +147,7 @@ Method: POST
 Description: Updates device parameters
 Expects:
 User/Physician's JWT in "x-auth" header
-id: Device's unique id
+deviceID: Device's unique id
 rate: Rate at which to take readings
 rangeStart: Starting time of day to take readings
 rangeEnd: Ending time of day to take readings

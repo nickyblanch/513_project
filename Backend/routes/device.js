@@ -86,31 +86,20 @@ router.post('/deleteDevice', function(req, res) {
     const token = req.headers["x-auth"];
     try {
         decoded = jwt.decode(token, userKey);
-        //Make sure device actually exists
-        Device.exists({deviceID: {$eq: req.body.deviceID}}, function(err, device) {
+        //Remove the device from the user's list of devices
+        User.findOneAndUpdate({email: {$eq: decoded.username}}, 
+        {$pull: {devices: req.body.deviceID}}, null, function(err, user) {
             if (err) {
                 return res.status(500).send(err);
             }
-            else if (!device) {
-                return res.status(400).json({error: "Device Does Not Exist"});
-            }
             else {
-                //Remove the device from the user's list of devices
-                User.findOneAndUpdate({email: {$eq: decoded.username}}, 
-                {$pull: {devices: req.body.deviceID}}, null, function(err, user) {
+                //Delete the device from the database
+                Device.deleteOne({deviceID: {$eq: req.body.deviceID}}, function(err, device) {
                     if (err) {
                         return res.status(500).send(err);
                     }
                     else {
-                        //Delete the device from the database
-                        Device.deleteOne({deviceID: {$eq: req.body.deviceID}}, function(err, device) {
-                            if (err) {
-                                return res.status(500).send(err);
-                            }
-                            else {
-                                return res.status(204).send();
-                            }
-                        });
+                        return res.status(204).send();
                     }
                 });
             }
@@ -129,21 +118,39 @@ router.post('/updateDevice', function(req, res) {
     }
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
+    //Try to authenticate user
     try {
-        decoded = jwt.decode(token, secretKey);
+        decoded = jwt.decode(token, userKey);
         //Find the device in the database
-        Device.findOneAndUpdate({id: {$eq: req.body.id}}, 
+        Device.findOneAndUpdate({deviceID: {$eq: req.body.deviceID}}, 
         {rate: req.body.rate, rangeStart: req.body.rangeStart, rangeEnd: req.body.rangeEnd}, null, function(err, device) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else {
-                res.status(204).send();
+                return res.status(204).send();
             }
         });
     }
+    //Otherwise, try to authenticate physician
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        try {
+            decoded = jwt.decode(token, physicianKey);
+            //Find the device in the database
+            Device.findOneAndUpdate({deviceID: {$eq: req.body.deviceID}}, 
+            {rate: req.body.rate, rangeStart: req.body.rangeStart, rangeEnd: req.body.rangeEnd}, null, function(err, device) {
+                if (err) {
+                    return res.status(500).send(err);
+                }
+                else {
+                    return res.status(204).send();
+                }
+            });
+        }
+        //Else, unauthenticated
+        catch (ex) {
+            return res.status(401).json({error: "Invalid JWT"});
+        }
     }
 });
 
