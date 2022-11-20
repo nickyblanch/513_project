@@ -72,7 +72,7 @@ router.post("/registerDevice", function(req, res) {
         });
     }
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        return res.status(401).json({error: "Invalid JWT"});
     }
 });
 
@@ -85,35 +85,39 @@ router.post('/deleteDevice', function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
+        decoded = jwt.decode(token, userKey);
         //Make sure device actually exists
-        Device.exists({id: {$eq: req.body.id}}, function(err, device) {
+        Device.exists({deviceID: {$eq: req.body.deviceID}}, function(err, device) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else if (!device) {
-                res.status(400).json({error: "Device Does Not Exist"});
-            }
-        });
-        //Remove the device from the user's list of devices
-        User.findOneAndUpdate({email: {$eq: decoded.username}}, 
-        {$pull: {devices: req.body.id}}, null, function(err, user) {
-            if (err) {
-                res.status(500).send(err);
-            }
-        });
-        //Delete the device from the database
-        Device.deleteOne({id: {$eq: req.body.id}}, function(err, device) {
-            if (err) {
-                res.status(500).send(err);
+                return res.status(400).json({error: "Device Does Not Exist"});
             }
             else {
-                res.status(204).send();
+                //Remove the device from the user's list of devices
+                User.findOneAndUpdate({email: {$eq: decoded.username}}, 
+                {$pull: {devices: req.body.deviceID}}, null, function(err, user) {
+                    if (err) {
+                        return res.status(500).send(err);
+                    }
+                    else {
+                        //Delete the device from the database
+                        Device.deleteOne({deviceID: {$eq: req.body.deviceID}}, function(err, device) {
+                            if (err) {
+                                return res.status(500).send(err);
+                            }
+                            else {
+                                return res.status(204).send();
+                            }
+                        });
+                    }
+                });
             }
         });
     }
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        return res.status(401).json({error: "Invalid JWT"});
     }
 });
 

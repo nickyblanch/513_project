@@ -133,10 +133,10 @@ Returns:
 
 /deleteDevice
 Method: POST
-Description: Deletes and existing device
+Description: Deletes an existing device
 Expects:
 User's JWT in "x-auth" header
-id: Device's unique id
+deviceID: Device's unique id
 500 if Internal Server Error
 401 if Invalid Authentication
 400 if Device Does Not Exist
