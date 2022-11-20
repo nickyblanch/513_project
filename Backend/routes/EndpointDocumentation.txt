@@ -65,7 +65,7 @@ password: New physician's password
 Returns:
 500 if Internal Server Error
 409 if Physician Already Exists
-201 if Physician Creation Successful
+201 & Physician if Physician Creation Successful
 
 /loginPhysician
 Method: POST

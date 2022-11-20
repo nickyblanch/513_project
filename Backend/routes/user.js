@@ -7,7 +7,7 @@ const fs = require('fs');
 // On AWS ec2, you can use to store the secret in a separate file. 
 // The file should be stored outside of your code directory. 
 // For encoding/decoding JWT
-const secretKey = fs.readFileSync(__dirname + '/../keys/jwtkey').toString();
+const secretKey = fs.readFileSync(__dirname + '/../keys/userkey').toString();
 
 var router = express.Router();
 
