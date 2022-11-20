@@ -2,7 +2,7 @@ var express = require('express');
 var User = require("../models/user")
 var Device = require("../models/device")
 const jwt = require("jwt-simple");
-const { randomBytes } = require('crypto');
+const crypto = require('crypto');
 const fs = require('fs');
 
 // On AWS ec2, you can use to store the secret in a separate file. 

@@ -1,0 +1,22 @@
+{
+  "name": "heart_tracker_app",
+  "version": "1.0.0",
+  "description": "ECE 513 Final Project",
+  "main": "app.js",
+  "scripts": {
+    "test": "test"
+  },
+  "author": "Elliot Zuercher, Gavin Caldwell, Nicholas Blanchard",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.1",
+    "bootstrap": "^5.2.2",
+    "cookie-parser": "^1.4.6",
+    "express": "^4.18.2",
+    "fs": "^0.0.1-security",
+    "jwt-simple": "^0.5.6",
+    "mongoose": "^6.7.2",
+    "morgan": "^1.10.0",
+    "path": "^0.12.7"
+  }
+}

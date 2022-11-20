@@ -138,3 +138,5 @@ router.post('/physicianGetSinglePatientData', function(req, res) {
         res.status(401).json({error: "Invalid JWT"});
     }
 });
+
+module.exports = router;

@@ -8,7 +8,7 @@ password: New user's password
 Returns:
 500 if Internal Server Error
 409 if User Already Exists
-201 if User Creation Successful
+201 & User if User Creation Successful
 
 /loginUser
 Method: POST
@@ -48,6 +48,7 @@ Method: POST
 Description: Assigns a physician (by fullname) to user
 Expects:
 User's JWT in "x-auth" header
+physician: Full name of physician to assign to user
 Returns:
 500 if Internal Server Error
 401 if Invalid Authentication

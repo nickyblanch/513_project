@@ -20,26 +20,28 @@ router.post("/createUser", function(req, res) {
     //Make sure email address isn't already linked to an account
     User.exists({email: {$eq: req.body.email}}, function(err, user) {
         if (err) {
-            res.status(500).send(err);
+            return res.status(500).send(err);
         }
         else if (user) {
-            res.status(409).json({error: "Email Already Linked to an Account!"});
-        }
-    });
-    //Save new user to database
-    const newUser = new User({
-        fullname: req.body.fullname,
-        email: req.body.email,
-        password: req.body.password,
-        physician: "none",
-        devices: []
-    });
-    newUser.save(function (err, user) {
-        if (err) {
-            res.status(500).send(err);
+            return res.status(409).json({error: "Email Already Linked to an Account!"});
         }
         else {
-            res.status(201).send();
+            //Save new user to database
+            const newUser = new User({
+                fullname: req.body.fullname,
+                email: req.body.email,
+                password: req.body.password,
+                physician: "none",
+                devices: []
+            });
+            newUser.save(function (err, user) {
+                if (err) {
+                    return res.status(500).send(err);
+                }
+                else {
+                    return res.status(201).send(user);
+                }
+            });
         }
     });
 });
@@ -49,20 +51,20 @@ router.post("/loginUser", function(req, res) {
     //Validate user login using email and password
     User.findOne({email: {$eq: req.body.email}}, function(err, user) {
         if (err) {
-            res.status(500).send(err);
+            return res.status(500).send(err);
         }
         else if (user) {
             if (req.body.password === user.password) {
                 //Send back a token that contains the user's username
                 const token = jwt.encode({username: req.body.email}, secretKey);
-                res.status(200).json({ token: token });
+                return res.status(200).json({ token: token });
             }
             else {
-                res.status(401).json({error: "Bad username/password"});   
+                return res.status(401).json({error: "Bad username/password"});   
             }
         }
         else {
-            res.status(401).json({error: "Bad username/password"});   
+            return res.status(401).json({error: "Bad username/password"});   
         }
     });
 });
@@ -80,15 +82,15 @@ router.post('/getUserData', function(req, res) {
         //Find the user in the database
         User.findOne({email: {$eq: decoded.username}}, function(err, user) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else {
-                res.status(200).send(user);  
+                return res.status(200).send(user);  
             }
         });
     }
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        return res.status(401).json({error: "Invalid JWT"});
     }
 });
 
@@ -106,15 +108,15 @@ router.post('/updateUserData', function(req, res) {
         User.findOneAndUpdate({email: {$eq: decoded.username}},
         {$set: {fullname: req.body.fullname, password: req.body.password}}, null, function(err, user) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else {
-                res.status(204).send();  
+                return res.status(204).send(); 
             }
         });
     }
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        return res.status(401).json({error: "Invalid JWT"});
     }
 });
 
@@ -131,25 +133,27 @@ router.post('/assignPhysician', function(req, res) {
         //Verify physician actually exists
         Physician.exists({fullname: {$eq: req.body.physician}}, function(err, physician) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else if (!physician) {
-                res.status(400).json({error: "Physician Does not Exist"});
-            }
-        });
-        //Assign the physician to the user
-        User.findOneAndUpdate({email: {$eq: decoded.username}},
-        {$set: {physician: req.body.physician}}, null, function(err, user) {
-            if (err) {
-                res.status(500).send(err);
+                return res.status(400).json({error: "Physician Does not Exist"});
             }
             else {
-                res.status(204).send();
+                //Assign the physician to the user
+                User.findOneAndUpdate({email: {$eq: decoded.username}},
+                {$set: {physician: req.body.physician}}, null, function(err, user) {
+                    if (err) {
+                        return res.status(500).send(err);
+                    }
+                    else {
+                        return res.status(204).send();
+                    }
+                });
             }
         });
     }
     catch (ex) {
-        res.status(401).json({error: "Invalid JWT"});
+        return res.status(401).json({error: "Invalid JWT"});
     }
 });
 

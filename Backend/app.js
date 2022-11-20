@@ -2,15 +2,18 @@
 Require Modules
 */
 var express = require('express');
-var createError = require('http-errors');
+const https = require("https");
+const fs = require('fs');
+/*var createError = require('http-errors');*/
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const bodyParser = require('body-parser');
 var indexRouter = require('./routes/index');
 var userRouter = require('./routes/user');
-var physicianRouter = require('.routes/physician');
+var physicianRouter = require('./routes/physician');
 var deviceRouter = require('./routes/device');
+const { fstat } = require('fs');
 
 //Create express app
 var app = express();
@@ -45,9 +48,10 @@ Setup Routers
 */
 app.use('/', indexRouter);
 app.use('/users', userRouter);
-//FIX ME
+app.use('/physicians', physicianRouter);
+app.use('/devices', deviceRouter);
 
-// catch 404 and forward to error handler
+/* catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
@@ -61,6 +65,17 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
+*/
 
-app.listen(3000)
+https.createServer(
+    {
+        key: fs.readFileSync(__dirname + '/keys/key.pem'),
+        cert: fs.readFileSync(__dirname + '/keys/cert.pem'),
+    },
+    app
+)
+.listen(3000, function() {
+    console.log("Server Running on Port 3000...");
+});
+
 module.exports = app;
