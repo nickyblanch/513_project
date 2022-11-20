@@ -7,7 +7,7 @@ const fs = require('fs');
 // On AWS ec2, you can use to store the secret in a separate file. 
 // The file should be stored outside of your code directory. 
 // For encoding/decoding JWT
-const secretKey = fs.readFileSync(__dirname + '/../keys/userkey').toString();
+const userKey = fs.readFileSync(__dirname + '/../keys/userkey').toString();
 
 var router = express.Router();
 
@@ -56,7 +56,7 @@ router.post("/loginUser", function(req, res) {
         else if (user) {
             if (req.body.password === user.password) {
                 //Send back a token that contains the user's username
-                const token = jwt.encode({username: req.body.email}, secretKey);
+                const token = jwt.encode({username: req.body.email}, userKey);
                 return res.status(200).json({ token: token });
             }
             else {
@@ -78,7 +78,7 @@ router.post('/getUserData', function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
+        decoded = jwt.decode(token, userKey);
         //Find the user in the database
         User.findOne({email: {$eq: decoded.username}}, function(err, user) {
             if (err) {
@@ -103,7 +103,7 @@ router.post('/updateUserData', function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
+        decoded = jwt.decode(token, userKey);
         //Find and update the user in the database
         User.findOneAndUpdate({email: {$eq: decoded.username}},
         {$set: {fullname: req.body.fullname, password: req.body.password}}, null, function(err, user) {
@@ -112,6 +112,35 @@ router.post('/updateUserData', function(req, res) {
             }
             else {
                 return res.status(204).send(); 
+            }
+        });
+    }
+    catch (ex) {
+        return res.status(401).json({error: "Invalid JWT"});
+    }
+});
+
+//List all physicians by fullname
+router.post('/listPhysicians', function(req, res) {
+    //Check if the X-Auth header is set
+    if (!req.headers["x-auth"]) {
+        return res.status(401).json({error: "Missing X-Auth header"});
+    }
+    //X-Auth should contain the token value
+    const token = req.headers["x-auth"];
+    try {
+        decoded = jwt.decode(token, userKey);
+        //Find all physicians and return their fullnames
+        Physician.find({}, function(err, physicians) {
+            if (err) {
+                return res.status(500).send(err);
+            }
+            else {
+                var physicianList = [];
+                physicians.forEach(physician => {
+                    physicianList.push(physician.fullname);
+                });
+                return res.status(200).json({physicians: physicianList});
             }
         });
     }
@@ -129,7 +158,7 @@ router.post('/assignPhysician', function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
+        decoded = jwt.decode(token, userKey);
         //Verify physician actually exists
         Physician.exists({fullname: {$eq: req.body.physician}}, function(err, physician) {
             if (err) {

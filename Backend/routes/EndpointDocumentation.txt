@@ -43,6 +43,16 @@ Returns:
 401 if Invalid Authentication
 204 if User Update Successful
 
+/listPhysicians
+Method: POST
+Description: Returns a list (by fullname) of all physicians
+Expects:
+User's JWT in "x-auth" header
+Returns:
+500 if Internal Server Error
+401 if Invalid Authentication
+200 & All Physician Fullnames if Valid Authentication
+
 /assignPhysician
 Method: POST
 Description: Assigns a physician (by fullname) to user

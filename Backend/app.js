@@ -13,7 +13,6 @@ var indexRouter = require('./routes/index');
 var userRouter = require('./routes/user');
 var physicianRouter = require('./routes/physician');
 var deviceRouter = require('./routes/device');
-const { fstat } = require('fs');
 
 //Create express app
 var app = express();
