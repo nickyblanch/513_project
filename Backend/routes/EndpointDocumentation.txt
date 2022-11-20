@@ -183,15 +183,8 @@ Returns:
 Method: POST
 Description: Pull latest device parameters
 Expects:
-id: Device's unique id
-APIkey: Device's unique API key
+Device's API Key in "x-api-key" header
 Returns:
 500 if Internal Server Error
-400 if Invalid Device ID
 401 if Invalid Authentication
-200 & Device if Pull Successful
-
-
-
-
-
+200 & rate, rangeStart, & rangeEnd if Pull Successful
