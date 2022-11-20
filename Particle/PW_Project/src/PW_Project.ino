@@ -52,7 +52,7 @@ void loop() {
   }
 
   // Trigger the integration
-  Particle.publish("Temp", "80", PRIVATE); // REPLACE "80" with data
+  Particle.publish("Reading", "{'beat:'" + String(80) + ",'ox':" + String(50) + "}", PRIVATE); // REPLACE "80" with data
 
   // Wait 30 seconds
   delay(30000);
