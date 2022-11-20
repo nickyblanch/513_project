@@ -1,53 +1,28 @@
-/*************************************************** 
- This is a library written for the Maxim MAX30105 Optical Smoke Detector
- It should also work with the MAX30102. However, the MAX30102 does not have a Green LED.
-
- These sensors use I2C to communicate, as well as a single (optional)
- interrupt line that is not currently supported in this driver.
- 
- Written by Peter Jansen and Nathan Seidle (SparkFun)
- BSD license, all text above must be included in any redistribution.
- *****************************************************/
-
 #pragma once
 
-#if (ARDUINO >= 100)
- #include "Arduino.h"
-#else
- #include "WProgram.h"
+// This will load the definition for common Particle variable types
+#include "Particle.h"
+
+
+#if defined(ARDUINO) && ARDUINO >= 100
+  #include "Arduino.h"
+#elif defined(SPARK_PHOTON)
+  #include "Particle.h"
 #endif
 
 #include <Wire.h>
 
-#define MAX30105_ADDRESS          0x57 //7-bit I2C Address
-//Note that MAX30102 has the same I2C address and Part ID
 
-#define I2C_SPEED_STANDARD        100000
-#define I2C_SPEED_FAST            400000
 
-//Define the size of the I2C buffer based on the platform the user has
-#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
+//The catch-all default is 32
+#define I2C_BUFFER_LENGTH 32
 
-  //I2C_BUFFER_LENGTH is defined in Wire.H
-  #define I2C_BUFFER_LENGTH BUFFER_LENGTH
-
-#elif defined(__SAMD21G18A__)
-
-  //SAMD21 uses RingBuffer.h
-  #define I2C_BUFFER_LENGTH SERIAL_BUFFER_SIZE
-
-#else
-
-  //The catch-all default is 32
-  #define I2C_BUFFER_LENGTH 32
-
-#endif
 
 class MAX30105 {
  public: 
   MAX30105(void);
 
-  boolean begin(TwoWire &wirePort = Wire, uint32_t i2cSpeed = I2C_SPEED_STANDARD, uint8_t i2caddr = MAX30105_ADDRESS);
+  boolean begin();
 
   uint32_t getRed(void); //Returns immediate red value
   uint32_t getIR(void); //Returns immediate IR value
@@ -140,17 +115,4 @@ class MAX30105 {
   void readRevisionID();
 
   void bitMask(uint8_t reg, uint8_t mask, uint8_t thing);
- 
-   #define STORAGE_SIZE 4 //Each long is 4 bytes so limit this to fit on your micro
-  typedef struct Record
-  {
-    uint32_t red[STORAGE_SIZE];
-    uint32_t IR[STORAGE_SIZE];
-    uint32_t green[STORAGE_SIZE];
-    byte head;
-    byte tail;
-  } sense_struct; //This is our circular buffer of readings from the sensor
-
-  sense_struct sense;
-
 };
