@@ -1,0 +1,6 @@
+{
+    "nrf-connect.toolchain.path": "${nrf-connect.toolchain:2.1.1}",
+    "particle.firmwareVersion": "4.0.0",
+    "particle.targetPlatform": "argon",
+    "idf.portWin": "COM19"
+}

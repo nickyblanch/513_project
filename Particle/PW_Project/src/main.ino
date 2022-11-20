@@ -8,12 +8,12 @@ void setup() {
 }
 
 void loop() {
-  digitalWrite(led, HIGH);   // Turn ON the LED
-
-  String temp = String(random(60, 80));
-  Particle.publish("temp", temp, PRIVATE);
-  delay(30000);               // Wait for 30 seconds
-
-  digitalWrite(led, LOW);    // Turn OFF the LED
-  delay(3000);               // Wait for 30 seconds
+  void loop() {
+  // Get some data
+  String data = "test string";
+  // Trigger the integration
+  Particle.publish("Temp", data, PRIVATE);
+  // Wait 60 seconds
+  delay(60000);
+}             // Wait for 30 seconds
 }
