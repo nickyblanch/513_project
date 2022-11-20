@@ -161,7 +161,7 @@ Method: POST
 Description: Returns all device data
 Expects:
 User/Physician's JWT in "x-auth" header
-id: Device's unique id
+deviceID: Device's unique id
 Returns:
 500 if Internal Server Error
 401 if Invalid Authentication
