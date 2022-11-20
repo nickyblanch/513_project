@@ -201,29 +201,21 @@ Endpoints accessed by the IoT device
 
 //Record reading
 router.post('/recordReading', function(req, res) {
-    Device.findOne({id: {$eq: req.body.id}}, function(err, device) {
+    //Check if the X-API-Key header is set
+    if (!req.headers["x-api-key"]) {
+        return res.status(401).json({error: "Missing X-API-Key header"});
+    }
+    var recording = {recording: Date.now(), heartRate: req.body.heartRate, bosLevel: req.body.bosLevel};
+    Device.findOneAndUpdate({APIkey: {$eq: req.headers["x-api-key"]}},
+    {$push: {recordings: recording}}, null, function(err, device) {
         if (err) {
-            res.status(500).send(err);
+            return res.status(500).send(err);
         }
-        else if (device) {
-            if (req.body.APIkey === device.APIkey) {
-                var recording = {recording: Date.now(), heartRate: req.body.heartRate, bosLevel: req.body.bosLevel};
-                Device.findOneAndUpdate({id: {$eq: req.body.id}},
-                {$push: {recordings: recording}}, null, function(err, device) {
-                    if (err) {
-                        res.status(500).send(err);
-                    }
-                    else {
-                        res.status(204).send();
-                    }
-                });
-            }
-            else {
-                res.status(401).send();
-            }
+        if (!device) {
+            return res.status(401).json({error: "Invalid API key"});
         }
         else {
-            res.status(400).json({error: "Invalid Device ID"});
+            return res.status(204).send();
         }
     });
 });

@@ -171,13 +171,11 @@ Returns:
 Method: POST
 Description: Records a device sensor reading
 Expects:
-id: Device's unique id
-APIkey: Device's unique API key
+Device's API Key in "x-api-key" header
 heartRate: Sensor heart rate reading
 bosLevel: Sensor blood-oxygen saturation level reading
 Returns:
 500 if Internal Server Error
-400 if Invalid Device ID
 401 if Invalid Authentication
 204 if Recording Successful
 
