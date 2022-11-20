@@ -1,5 +1,0 @@
-{
-    "nrf-connect.toolchain.path": "${nrf-connect.toolchain:2.1.1}",
-    "particle.firmwareVersion": "1.4.4",
-    "particle.targetPlatform": "argon"
-}
