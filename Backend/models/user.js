@@ -5,7 +5,7 @@ const userSchema = db.Schema({
     email: String,
     password: String,
     physician: String,
-    devices: [ Number ]
+    devices: [ String ]
 });
 
 const User = db.model("User", userSchema);

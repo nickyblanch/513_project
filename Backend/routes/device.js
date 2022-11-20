@@ -8,7 +8,8 @@ const fs = require('fs');
 // On AWS ec2, you can use to store the secret in a separate file. 
 // The file should be stored outside of your code directory. 
 // For encoding/decoding JWT
-const secretKey = fs.readFileSync(__dirname + '/../keys/userkey').toString();
+const physicianKey = fs.readFileSync(__dirname + '/../keys/physiciankey').toString();
+const userKey = fs.readFileSync(__dirname + '/../keys/userkey').toString();
 
 var router = express.Router();
 
@@ -31,38 +32,42 @@ router.post("/registerDevice", function(req, res) {
     //X-Auth should contain the token value
     const token = req.headers["x-auth"];
     try {
-        decoded = jwt.decode(token, secretKey);
+        decoded = jwt.decode(token, userKey);
         //Make sure device has not already been registered
-        Device.exists({id: {$eq: req.body.id}}, function(err, device) {
+        Device.exists({deviceID: {$eq: req.body.deviceID}}, function(err, device) {
             if (err) {
-                res.status(500).send(err);
+                return res.status(500).send(err);
             }
             else if (device) {
-                res.status(409).json({error: "Device Already Registered"});
-            }
-        });
-        //Add the device to the user's list of devices
-        User.findOneAndUpdate({email: {$eq: decoded.username}},
-        {$push: {devices: req.body.id}}, null, function(err, user) {
-            if (err) {
-                res.status(500).send(err);
-            }
-        });
-        //Create the new device in the database with a unique API key
-        const newDevice = new Device({
-            id: req.body.id,
-            APIkey: generateKey(),
-            rate: 30,
-            rangeStart: 6,
-            rangeEnd: 20,
-            recordings: []
-        });
-        newDevice.save(function (err, device) {
-            if (err) {
-                res.status(500).send(err);
+                return res.status(409).json({error: "Device Already Registered"});
             }
             else {
-                res.status(201).send(device);
+                //Add the device to the user's list of devices
+                User.findOneAndUpdate({email: {$eq: decoded.username}},
+                {$push: {devices: req.body.deviceID}}, null, function(err, user) {
+                    if (err) {
+                        return res.status(500).send(err);
+                    }
+                    else {
+                        //Create the new device in the database with a unique API key
+                        const newDevice = new Device({
+                            deviceID: req.body.deviceID,
+                            APIkey: generateKey(),
+                            rate: 30,
+                            rangeStart: 6,
+                            rangeEnd: 20,
+                            recordings: []
+                        });
+                        newDevice.save(function (err, device) {
+                            if (err) {
+                                return res.status(500).send(err);
+                            }
+                            else {
+                                return res.status(201).send(device);
+                            }
+                        });
+                    }
+                });
             }
         });
     }

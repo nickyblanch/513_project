@@ -1,7 +1,7 @@
 const db = require("../db");
 
 const deviceSchema = db.Schema({
-    id: Number,
+    deviceID: String,
     APIkey: String,
     rate: Number,
     rangeStart: Number, 
