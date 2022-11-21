@@ -66,6 +66,11 @@ app.use(function(err, req, res, next) {
 });
 */
 
+app.listen(3000, function() {
+    console.log("App listening on port 3000...");
+});
+
+/*
 https.createServer(
     {
         key: fs.readFileSync(__dirname + '/keys/key.pem'),
@@ -76,5 +81,6 @@ https.createServer(
 .listen(3000, function() {
     console.log("Server Running on Port 3000...");
 });
+*/
 
 module.exports = app;
