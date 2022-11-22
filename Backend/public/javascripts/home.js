@@ -1,7 +1,7 @@
 //Adding event listeners for the log in page nav bar:
 $("#home").click(function(){
     $.get("/home");
-    console.log("button pressed);
+    console.log("button pressed");
 });
 
 $("#index").click(function(){
