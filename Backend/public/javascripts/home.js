@@ -1,6 +1,7 @@
 //Adding event listeners for the log in page nav bar:
 $("#home").cick(function(){
     $.get("/home");
+    console.log("button pressed");
 });
 
 $("#index").cick(function(){
