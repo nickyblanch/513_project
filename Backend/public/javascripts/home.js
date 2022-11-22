@@ -1,22 +1,21 @@
 //Adding event listeners for the log in page nav bar:
-$("#home").cick(function(){
+$("#home").click(function(){
     $.get("/home");
-    console.log("button pressed");
 });
 
-$("#index").cick(function(){
+$("#index").click(function(){
     $.get("/index");
 });
 
-$("#reference").cick(function(){
+$("#reference").click(function(){
     $.get("/reference");
 });
 
 //event listeners for the log in pages
-$("#usrSignIn").cick(function(){
+$("#usrSignIn").click(function(){
     $.get("/users/loginUsr");
 });
 
-$("#physSignIn").cick(function(){
+$("#physSignIn").click(function(){
     $.get("/physicians/loginPhysician");
 });
