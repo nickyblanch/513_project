@@ -21,123 +21,99 @@ void loop();
 
 // Global variable delcarations
 MAX30105 max30105;                    // Sensor
+int32_t bufferLength;                 //data length
+int32_t spo2;                         //SPO2 value
+int8_t validSPO2;                     //indicator to show if the SPO2 calculation is valid
+int32_t heartRate;                    //heart rate value
+int8_t validHeartRate;                //indicator to show if the heart rate calculation is valid
+String data = String(10);             //data to be sent to server
+uint16_t irBuffer[300];               //infrared LED sensor data
+uint16_t redBuffer[300];              //red LED sensor data
+uint32_t loop_counter = 0;            //loop counter
+uint32_t validated_hr = 0;            //validated heart rate data
+uint32_t validated_o2 = 0;            //validated o2 data
+uint32_t previous_request = 0;        //time of the previous sensor data request
+uint16_t delay = 1800000;             //ms delay between readings (default 30 minutes)
+uint8_t current_minute = 0;           //current minute
+uint8_t current_hour = 0;             //current hour
+uint8_t constraint_minute_lower = 0;  //constraint minute
+uint8_t constraint_hour_lower = 0;    //constraint hour
+uint8_t constraint_minute_upper = 0;  //constraint minute (upper)
+uint8_t constraint_hour_upper = 0;    //constraint hour (upper)
 
-// Heart Rate & SPO2
-int32_t bufferLength;       //data length
-int32_t spo2;               //SPO2 value
-int8_t validSPO2;           //indicator to show if the SPO2 calculation is valid
-int32_t heartRate;          //heart rate value
-int8_t validHeartRate;      //indicator to show if the heart rate calculation is valid
-String data = String(10);
-uint16_t irBuffer[100];     //infrared LED sensor data
-uint16_t redBuffer[100];    //red LED sensor data
-uint32_t loop_counter = 0;  //loop counter
+// Synchronous State Machine
+uint8_t state = 0;
+// 0 = Waiting to request measurement, 1 = Request measurement, 2 = Take measurement, 3 = Post measurement
+
 
 
 void setup() {
   Serial.begin(9600);
   max30105.begin();
-  max30105.setup();
-  max30105.setPulseAmplitudeRed(0x0A);
-  max30105.setPulseAmplitudeGreen(0);
+  max30105.setup(60, 4, 2, 100, 411, 4096);
+  Serial.println("Setup finished!");
 }
 
 void loop() {
 
-  bufferLength = 100; //buffer length of 100 stores 4 seconds of samples running at 25sps
- 
-  //read the first 100 samples, and determine the signal range
-  for (byte i = 0 ; i < bufferLength ; i++) {
-    while (max30105.available() == false) //do we have new data?
-      max30105.check(); //Check the sensor for new data
+  // If we are waiting to take a measurement
+  if (state == 0) {
 
-      redBuffer[i] = max30105.getRed();
-      irBuffer[i] = max30105.getIR();
-      max30105.nextSample(); //We're finished with this sample so move to next sample
+    // Update current time
 
-      Serial.print(F("red="));
-      Serial.print(redBuffer[i], DEC);
-      Serial.print(F(", ir="));
-      Serial.println(irBuffer[i], DEC);
+    if (millis() - previous_request >= delay) {
+      if ()
+    // Transition to measurement state
+    state = 1;
+    previous_request = millis();
+    }
+    else {
+      // Check for updates from Particle cloud
+    }
   }
 
-  //calculate heart rate and SpO2 after first 100 samples (first 4 seconds of samples)
-  maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
+  // If we are requesting a measurement
+  if (state == 1) {
 
-  //Continuously taking samples from MAX30102.  Heart rate and SpO2 are calculated every 1 second
-  while (1)
-  {
-    //dumping the first 25 sets of samples in the memory and shift the last 75 sets of samples to the top
-    for (byte i = 25; i < 100; i++)
-    {
-      redBuffer[i - 25] = redBuffer[i];
-      irBuffer[i - 25] = irBuffer[i];
-    }
+    // Transition to measurement state
+    state = 2;
+  }
 
-    //take 25 sets of samples before calculating the heart rate.
-    for (byte i = 75; i < 100; i++)
-    {
+  // If we are taking a measurement:
+  if (state == 2) {
+
+    bufferLength = 300; //buffer length of 100 stores 4 seconds of samples running at 25sps
+  
+    //read the first 300 samples, and determine the signal range
+    for (byte i = 0 ; i < bufferLength ; i++) {
       while (max30105.available() == false) //do we have new data?
         max30105.check(); //Check the sensor for new data
 
-      redBuffer[i] = max30105.getRed();
-      irBuffer[i] = max30105.getIR();
-      max30105.nextSample(); //We're finished with this sample so move to next sample
-
-      //send samples and calculation result to terminal program through UART
-      // Serial.print(F("red="));
-      // Serial.print(redBuffer[i], DEC);
-      // Serial.print(F(", ir="));
-      // Serial.print(irBuffer[i], DEC);
-
-      // Serial.print(F(", HR="));
-      // Serial.print(heartRate, DEC);
-
-      // Serial.print(F(", HRvalid="));
-      // Serial.print(validHeartRate, DEC);
-
-      // Serial.print(F(", SPO2="));
-      // Serial.print(spo2, DEC);
-
-      // Serial.print(F(", SPO2Valid="));
-      // Serial.println(validSPO2, DEC);
+        redBuffer[i] = max30105.getRed();
+        irBuffer[i] = max30105.getIR();
+        max30105.nextSample(); //We're finished with this sample so move to next sample
     }
 
-    //After gathering 25 new samples recalculate HR and SP02
+    //After gathering 300 new samples recalculate HR and SP02
     maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
-
-    if (loop_counter % 3000 == 0) {
-      String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": " + String(spo2) + "}";
-      Particle.publish("Reading", String(send_data), PRIVATE);
+    if(validSPO2) {
+      validated_o2 = spo2;
     }
-    Serial.println(loop_counter);
-    Serial.println(String("HR:") + heartRate + ", O2: " + spo2);
+    if(validHeartRate){
+      validated_hr = heartRate;
+    }
+
+    // Transition to post state
+    state = 3;
+  }
+
+  // If we are posting data to the server
+  if (state == 3) {
+      String send_data = String("{ \"beat\": \"") + String(validated_hr) + "\"" + ", \"ox\": " + String(validated_o2) + "}";
+      Particle.publish("Reading", String(send_data), PRIVATE);
+      Serial.println(send_data);
+
+      // Transition to wait state
+      state = 0;
   }
 }
-
-
-
-/*
-// Get some data
-  long irValue = max30105.getIR();
-
-  if(checkForBeat(irValue) == true) {
-    long delta = millis() - lastBeat;
-    lastBeat = millis();
-
-    beatsPerMinute = 60 / (delta * 1000.00);
-
-    if (beatsPerMinute < 255 && beatsPerMinute > 20) {
-      rates[rateSpot++] = (byte)beatsPerMinute;
-      rateSpot %= RATE_SIZE;
-
-      beatAvg = 0;
-      for(byte x = 0; x < RATE_SIZE; x++) {
-        beatAvg += rates[x];
-        beatAvg /= RATE_SIZE;
-      }
-    }
-
-    data = String(beatsPerMinute);
-  }
-*/
