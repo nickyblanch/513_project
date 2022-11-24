@@ -6,9 +6,8 @@
 #include "max30105.h"
 #include "heartRate.h"
 #include "spo2_algorithm.h"
-#include <Wire.h>
 
-// Definitions
+// Definitions and function declarations
 void setup();
 void loop();
 #define MAX_BRIGHTNESS 255
@@ -31,6 +30,8 @@ uint32_t delay_time = 1800000;        //ms delay between readings (default 30 mi
 float current_time = 0;               //current time
 float constraint_time_lower = 0;      //constraint time lower
 float constraint_time_upper = 0;      //constraint time upper
+
+
 
 // Synchronous State Machine
 uint8_t state = 2;
