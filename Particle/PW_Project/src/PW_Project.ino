@@ -52,19 +52,23 @@ void loop() {
   if (state == 0) {
 
     // Update current time
-    current_time = float(Time.hour()) + Time.minute() / 60.00;
+    current_time = float(Time.hour()) + float(Time.minute()) / 60.00;
 
     // If we are in the acceptable time frame
     if (current_time > constraint_time_lower && current_time < constraint_time_upper) {
+
       // If we've waited enough between measurements
       if (millis() - previous_request >= delay_time) {
+
         // Transition to measurement state
         state = 1;
         previous_request = millis();
-        }
+
+      }
     }
     else {
       // Check for updates from Particle cloud
+
     }
   }
 
@@ -77,9 +81,11 @@ void loop() {
 
     // If the user places their finger on the sensor
     if (1) {
+
       // Transition to measurement state
       state = 2;
     }
+
     // If it's been 5 minutes and we haven't transitioned yet
     else if (millis() - previous_request > 300000) {
       RGB.color(0, 0, 0);
@@ -108,14 +114,17 @@ void loop() {
     maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
 
     // Transition to post state
-    //if (validSPO2 && validHeartRate) {
+    if ((50 < spo2 < 100) && (30 < heartRate < 300)) {
       state = 3;
-    //}
+    }
+    else {
+      state = 2; // Try getting a reading again
+    }
   }
 
   // If we are posting data to the server
   if (state == 3) {
-    Serial.println("entering print state");
+
       String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": " + String(spo2) + "}";
       Particle.publish("Reading", String(send_data), PRIVATE);
       Serial.println(send_data);
