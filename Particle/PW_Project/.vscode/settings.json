@@ -10,5 +10,6 @@
     "nrf-connect.topdir": "${nrf-connect.sdk:2.1.1}",
     "nrf-connect.applications": [
         "c:\\Users\\nicky\\OneDrive\\Documents\\498\\Noric_SoftwareFirmware\\spi_fujitsu_fram"
-    ]
+    ],
+    "particle.targetDevice": ""
 }
