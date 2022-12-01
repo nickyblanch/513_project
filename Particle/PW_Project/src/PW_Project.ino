@@ -47,7 +47,11 @@ uint32_t delay_time = 1800000;        //ms delay between readings (default 30 mi
 float current_time = 0;               //current time
 float constraint_time_lower = 6;      //constraint time lower
 float constraint_time_upper = 22;     //constraint time upper
-LEDStatus blinkLED;                   //LED controlling class
+String storage_buffer[48];            //storage for measurements
+uint8_t stored_data_points = 0;       //number of stored data points
+uint32_t when_stored[48];             //when measurements are stored
+
+LEDStatus blinkLED(RGB_COLOR_BLUE, LED_PATTERN_BLINK, LED_SPEED_FAST, LED_PRIORITY_IMPORTANT);  //LED control
 
 // Synchronous State Machine
 uint8_t state = 0;
@@ -149,6 +153,16 @@ void setup() {
   Particle.subscribe("hook-response/Update", updateHandler, MY_DEVICES);
   Particle.subscribe("hook-response/Reading", readingHandler, MY_DEVICES);
 
+  // Timezone
+  Time.zone(-7);
+
+   // Update LED
+  blinkLED.setColor(RGB_COLOR_GREEN);
+  blinkLED.setSpeed(LED_SPEED_SLOW);
+  blinkLED.setPattern(LED_PATTERN_FADE);
+  if (!blinkLED.isActive()) blinkLED.setActive(true);
+  blinkLED.on();
+
 }
 
 // Loop Function
@@ -158,13 +172,16 @@ void loop() {
   if (state == 0) {
 
     // Update current time
-    current_time = float(Time.hour()) - 7.00 + float(Time.minute()) / 60.00;
+    current_time = float(Time.hour()) + float(Time.minute()) / 60.00;
+    if(current_time < 0) {
+      current_time += 24.0;
+    }
 
     // If we are in the acceptable time frame
     if (current_time > constraint_time_lower && current_time < constraint_time_upper) {
 
       // If we've waited enough between measurements
-      if (millis() - previous_request >= delay_time) {
+      if (millis() - previous_request >= 60000) { //delay_time) {
 
         // Transition to measurement state
         state = 1;
@@ -192,10 +209,14 @@ void loop() {
     Serial.println("Requesting a measurement - place finger on sensor.");
 
     // Enable LED
-    blinkLED.setColor((uint8_t(0) << 16) | (uint8_t(0) << 8) | uint8_t(255));
+    // blinkLED.setColor((uint8_t(0) << 16) | (uint8_t(0) << 8) | uint8_t(255));
+    // blinkLED.setPattern(LED_PATTERN_BLINK);
+    // blinkLED.setSpeed(LED_SPEED_NORMAL);
+    blinkLED.setColor(RGB_COLOR_BLUE);
     blinkLED.setPattern(LED_PATTERN_BLINK);
-    blinkLED.setSpeed(LED_SPEED_NORMAL);
+    blinkLED.setSpeed(LED_SPEED_FAST);
     if (!blinkLED.isActive()) blinkLED.setActive(true);
+    blinkLED.on();
 
     // If the user places their finger on the sensor
     if (1) {
@@ -203,11 +224,6 @@ void loop() {
       Serial.println("Finger detected on sensor."); 
       // Transition to measurement state
       state = 2;
-    }
-
-    // If it's been 5 minutes and we haven't transitioned yet
-    else if (millis() - previous_request > 300000) {
-      state = 0;
     }
     
   }
@@ -236,6 +252,16 @@ void loop() {
       Serial.println("Valid measurement, sending data.");
       state = 3;
     }
+    // If it's been 5 minutes and we haven't transitioned yet
+    else if (millis() - previous_request > 600000) {
+      // Update LED
+      blinkLED.setColor(RGB_COLOR_GREEN);
+      blinkLED.setSpeed(LED_SPEED_SLOW);
+      blinkLED.setPattern(LED_PATTERN_FADE);
+
+      // Back to waiting state
+      state = 0;
+    }
     else {
       Serial.println("Not a valid measurement. HR:" + String(heartRate) + " SPO2: " + String(spo2));
       state = 2; // Try getting a reading again
@@ -246,7 +272,8 @@ void loop() {
   // If we are posting data to the server
   if (state == 3) {
 
-      String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": " + String(spo2) + "}";
+      // String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": " + String(spo2) + "}";
+      String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": " + String(spo2) + ", \"time\": " + String(Time.format(Time.now(), TIME_FORMAT_ISO8601_FULL)) + "}";
       bool success = Particle.publish("Reading", String(send_data), PRIVATE);
       Serial.println(send_data);
 
@@ -255,12 +282,55 @@ void loop() {
         state = 0;
 
         // Update LED
-        blinkLED.setColor((uint8_t(0) << 16) | (uint8_t(0) << 8) | uint8_t(255));
+        blinkLED.setColor(RGB_COLOR_GREEN);
         blinkLED.setSpeed(LED_SPEED_SLOW);
+        blinkLED.setPattern(LED_PATTERN_FADE);
+
+        // DEBUG
+        Serial.println("Data successfully sent.");
+
+        // Try to send backed up data
+        uint8_t temp_storage = stored_data_points;
+        for (uint8_t i = 0; i < temp_storage; i++) {
+
+          // If data is less than 24 hours old
+          if ((millis() - when_stored[i]) < 24*60*60*1000) {
+
+            success = success && Particle.publish("Reading", storage_buffer[i]);
+
+            if (success) {
+              // Yay!
+              Serial.println("Send stored point: " + String(storage_buffer[i]));
+            }
+          }
+          else {
+            Serial.println("Stored data point too old - not sent.");
+          }
+        }
+        if (success) {
+          // If all were successful:
+          stored_data_points = 0;
+          Serial.println("All stored data points sent.");
+        }
       }
       else {
-        // Try again in 1 second
-        delay(1000);
+        // Save data to be transmitted later
+        Serial.println("No internet - saving data for later.");
+        storage_buffer[stored_data_points] = send_data;
+        when_stored[stored_data_points] = millis();
+        stored_data_points++;
+        state = 0;
+
+         // Update LED
+        blinkLED.setColor(RGB_COLOR_YELLOW);
+        blinkLED.setSpeed(LED_SPEED_FAST);
+        blinkLED.setPattern(LED_PATTERN_BLINK);
+        delay(2000);
+
+         // Re-Update LED
+        blinkLED.setColor(RGB_COLOR_GREEN);
+        blinkLED.setSpeed(LED_SPEED_SLOW);
+        blinkLED.setPattern(LED_PATTERN_FADE);
       }
 
   }
