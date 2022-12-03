@@ -47,9 +47,11 @@ uint32_t delay_time = 1800000;        //ms delay between readings (default 30 mi
 float current_time = 0;               //current time
 float constraint_time_lower = 6;      //constraint time lower
 float constraint_time_upper = 22;     //constraint time upper
-String storage_buffer[48];            //storage for measurements
-uint8_t stored_data_points = 0;       //number of stored data points
-uint32_t when_stored[48];             //when measurements are stored
+struct stored_data {
+  String buffer[48];                  //storage for measurements
+  uint32_t when_stored[48];           //when measurements are stored
+  uint8_t number_stored = 0;          //number of stored data points
+} stored_data;
 
 LEDStatus blinkLED(RGB_COLOR_BLUE, LED_PATTERN_BLINK, LED_SPEED_FAST, LED_PRIORITY_IMPORTANT);  //LED control
 
@@ -290,17 +292,17 @@ void loop() {
         Serial.println("Data successfully sent.");
 
         // Try to send backed up data
-        uint8_t temp_storage = stored_data_points;
+        uint8_t temp_storage = stored_data.number_stored;
         for (uint8_t i = 0; i < temp_storage; i++) {
 
           // If data is less than 24 hours old
-          if ((millis() - when_stored[i]) < 24*60*60*1000) {
+          if ((millis() - stored_data.when_stored[i]) < 24*60*60*1000) {
 
-            success = success && Particle.publish("Reading", storage_buffer[i]);
+            success = success && Particle.publish("Reading", stored_data.buffer[i]);
 
             if (success) {
               // Yay!
-              Serial.println("Send stored point: " + String(storage_buffer[i]));
+              Serial.println("Send stored point: " + String(stored_data.buffer[i]));
             }
           }
           else {
@@ -309,16 +311,16 @@ void loop() {
         }
         if (success) {
           // If all were successful:
-          stored_data_points = 0;
+          stored_data.number_stored = 0;
           Serial.println("All stored data points sent.");
         }
       }
       else {
         // Save data to be transmitted later
         Serial.println("No internet - saving data for later.");
-        storage_buffer[stored_data_points] = send_data;
-        when_stored[stored_data_points] = millis();
-        stored_data_points++;
+        stored_data.buffer[stored_data.number_stored] = send_data;
+        stored_data.when_stored[stored_data.number_stored] = millis();
+        stored_data.number_stored++;
         state = 0;
 
          // Update LED
