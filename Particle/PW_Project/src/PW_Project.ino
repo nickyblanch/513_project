@@ -128,7 +128,7 @@ void updateHandler(const char *event, const char *data) {
 // Web Hook Event Handler
 void readingHandler(const char *event, const char *data) {
   // Handle the integration response
-  Serial.println(data);
+  Serial.println(data); 
 }
 
 // Find string returned in web hook event data
