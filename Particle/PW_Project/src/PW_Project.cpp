@@ -32,30 +32,34 @@ void setup();
 void loop();
 void updateHandler(const char *event, const char *data);
 void readingHandler(const char *event, const char *data);
-String return_string(uint8_t start, uint8_t end, const char* input);
+void return_string(uint8_t start, uint8_t end, const char* input, char output[]);
 #define MAX_BRIGHTNESS 255
 
 // Global variable delcarations
-MAX30105 max30105;                    // Sensor
-int32_t bufferLength;                 //data length
-int32_t spo2;                         //SPO2 value
-int8_t validSPO2;                     //indicator to show if the SPO2 calculation is valid
-int32_t heartRate;                    //heart rate value
-int8_t validHeartRate;                //indicator to show if the heart rate calculation is valid
-String data = String(10);             //data to be sent to server
-uint16_t irBuffer[100];               //infrared LED sensor data
-uint16_t redBuffer[100];              //red LED sensor data
-uint32_t loop_counter = 0;            //loop counter
-uint32_t validated_hr = 0;            //validated heart rate data
-uint32_t validated_o2 = 0;            //validated o2 data
-uint32_t previous_request = 0;        //time of the previous sensor data request
-uint32_t delay_time = 1800000;        //ms delay between readings (default 30 minutes)
-float current_time = 0;               //current time
-float constraint_time_lower = 6;      //constraint time lower
-float constraint_time_upper = 22;     //constraint time upper
-String storage_buffer[48];            //storage for measurements
-uint8_t stored_data_points = 0;       //number of stored data points
-uint32_t when_stored[48];             //when measurements are stored
+MAX30105 max30105;                    // Sensor object
+int32_t bufferLength;                 // Data length
+int32_t spo2;                         // SPO2 value
+int8_t validSPO2;                     // Indicator to show if the SPO2 calculation is valid
+int32_t heartRate;                    // Heart rate value
+int8_t validHeartRate;                // Indicator to show if the heart rate calculation is valid
+String data = String(10);             // Data to be sent to server
+uint16_t irBuffer[100];               // Infrared LED sensor data
+uint16_t redBuffer[100];              // Red LED sensor data
+uint32_t loop_counter = 0;            // Loop counter
+uint32_t validated_hr = 0;            // Validated heart rate data
+uint32_t validated_o2 = 0;            // Validated o2 data
+uint32_t previous_request = 0;        // Time of the previous sensor data request
+uint32_t delay_time = 1800000;        // ms delay between readings (default 30 minutes)
+float current_time = 0;               // Current time
+float constraint_time_lower = 6;      // Constraint time lower
+float constraint_time_upper = 22;     // Constraint time upper
+char event_data[3];                   // Updated Particle parameters
+
+struct stored_data {                  // Struct to store buffered data
+  String buffer[24];                  // Storage for measurements
+  uint32_t when_stored[24];           // When measurements are stored
+  uint8_t number_stored = 0;          // Number of stored data points
+} stored_data;
 
 LEDStatus blinkLED(RGB_COLOR_BLUE, LED_PATTERN_BLINK, LED_SPEED_FAST, LED_PRIORITY_IMPORTANT);  //LED control
 
@@ -66,7 +70,11 @@ uint8_t state = 0;
 // 2 = Take measurement
 // 3 = Post measurement
 
-// Web Hook Event Handler
+/****************************************************************************************************************************/
+// WEBHOOK EVENT HANDLERS & AUXILARY FUNCTIONS                                                                              //
+/****************************************************************************************************************************/
+
+// Web Hook Event Handler for updating parameters on Particle IOT Board
 void updateHandler(const char *event, const char *data) {
   // Handle the integration response
   Serial.println(data);
@@ -98,17 +106,21 @@ void updateHandler(const char *event, const char *data) {
 
         // If we're in the rate portion:
         if (data_part == 0) {
-          delay_time = return_string(starting_location, ending_location, data).toInt() * 60 * 1000;
+          return_string(starting_location, ending_location, data, event_data);
+          delay_time = (int)(atof(event_data) * 60.0 * 1000.0);
 
           // DEBUG
-          Serial.println("Updated delay time to: " + String(delay_time));
+          Serial.print("Updated delay time to: ");
+          Serial.println(delay_time);
         }
         // If we're in the start portion:
         if (data_part == 1) {
-          constraint_time_lower = return_string(starting_location, ending_location, data).toInt();
+          return_string(starting_location, ending_location, data, event_data);
+          constraint_time_lower = atof(event_data);
 
           // DEBUG
-          Serial.println("Updated start range to: " + String(constraint_time_lower));
+          Serial.print("Updated start range to: ");
+          Serial.println(constraint_time_lower);
         }
     
         // Move on to next portion:
@@ -117,11 +129,14 @@ void updateHandler(const char *event, const char *data) {
       }
       // If we find the end of the string:
       else if (*(data+i) == '}') {
+
         // We're in the end portion:
-        constraint_time_upper = return_string(starting_location, i, data).toInt();
+        return_string(starting_location, i, data, event_data);
+        constraint_time_upper = atof(event_data);
 
         // DEBUG
-        Serial.println("Updated range end to: " + String(constraint_time_upper));
+        Serial.print("Updated range end to: ");
+        Serial.println(constraint_time_upper);
       }
       i++;
 
@@ -132,19 +147,22 @@ void updateHandler(const char *event, const char *data) {
 // Web Hook Event Handler
 void readingHandler(const char *event, const char *data) {
   // Handle the integration response
-  Serial.println(data);
+  Serial.println(data); 
 }
 
 // Find string returned in web hook event data
-String return_string(uint8_t start, uint8_t end, const char* input) {
+void return_string(uint8_t start, uint8_t end, const char* input, char output[]) {
   uint8_t index = start + 1;
-  String temp = "";
   while (index < end) {
-    temp = temp + input[index];
+    output[index - (start + 1)] = input[index];
     index++;
   }
-  return temp;
+  output[index - (start + 1)] = '\0';
 }
+
+/****************************************************************************************************************************/
+// SETUP FUNCTION                                                                                                           //
+/****************************************************************************************************************************/
 
 // Setup Function
 void setup() {
@@ -171,11 +189,18 @@ void setup() {
 
 }
 
+/****************************************************************************************************************************/
+// LOOP FUNCTION                                                                                                            //
+/****************************************************************************************************************************/
+
 // Loop Function
 void loop() {
 
   // If we are waiting to take a measurement
   if (state == 0) {
+
+    // Retrieve newest parameters from cloud
+    Particle.publish("Update", "dummy_data", PRIVATE);
 
     // Update current time
     current_time = float(Time.hour()) + float(Time.minute()) / 60.00;
@@ -187,7 +212,7 @@ void loop() {
     if (current_time > constraint_time_lower && current_time < constraint_time_upper) {
 
       // If we've waited enough between measurements
-      if (millis() - previous_request >= 60000) { //delay_time) {
+      if (millis() - previous_request >= delay_time) {
 
         // Transition to measurement state
         state = 1;
@@ -196,17 +221,18 @@ void loop() {
       }
       else {
         Serial.println("Waiting for a measurement, but it hasn't been long enough yet.");
-        Particle.publish("Update", String("dummy_data"), PRIVATE);
+        // Particle.publish("Update", String("dummy_data"), PRIVATE);
 
       }
     }
     else {
-      Serial.println("Waiting for a measurement, but it's not in the acceptable time frame. Current time: " + String(current_time));
+      Serial.print("Waiting for a measurement, but it's not in the acceptable time frame. Current time: ");
+      Serial.println(current_time);
       // Check for updates from Particle cloud
-      Particle.publish("Update", String("dummy_data"), PRIVATE);
+      // Particle.publish("Update", String("dummy_data"), PRIVATE);
     }
 
-    delay(10000);
+    delay(2000);
   }
 
   // If we are requesting a measurement
@@ -215,9 +241,6 @@ void loop() {
     Serial.println("Requesting a measurement - place finger on sensor.");
 
     // Enable LED
-    // blinkLED.setColor((uint8_t(0) << 16) | (uint8_t(0) << 8) | uint8_t(255));
-    // blinkLED.setPattern(LED_PATTERN_BLINK);
-    // blinkLED.setSpeed(LED_SPEED_NORMAL);
     blinkLED.setColor(RGB_COLOR_BLUE);
     blinkLED.setPattern(LED_PATTERN_BLINK);
     blinkLED.setSpeed(LED_SPEED_FAST);
@@ -243,17 +266,17 @@ void loop() {
     Serial.println("Entering measurement loop");
     for (byte i = 0 ; i < bufferLength ; i++) {
       while (max30105.available() == false) //do we have new data?
-        max30105.check(); //Check the sensor for new data
+      max30105.check(); //Check the sensor for new data
 
-        redBuffer[i] = max30105.getRed();
-        irBuffer[i] = max30105.getIR();
-        max30105.nextSample(); //We're finished with this sample so move to next sample
+      redBuffer[i] = max30105.getRed();
+      irBuffer[i] = max30105.getIR();
+      max30105.nextSample(); //We're finished with this sample so move to next sample
     }
 
-    //After gathering 100 new samples recalculate HR and SP02
+    //After gathering 100 new samples calculate HR and SP02
     maxim_heart_rate_and_oxygen_saturation(irBuffer, bufferLength, redBuffer, &spo2, &validSPO2, &heartRate, &validHeartRate);
 
-    //Transition to post state
+    // If measurement is valid
     if ((50 < spo2) && (spo2 < 101) && (30 < heartRate) && (heartRate < 300)) {
       Serial.println("Valid measurement, sending data.");
       state = 3;
@@ -268,8 +291,12 @@ void loop() {
       // Back to waiting state
       state = 0;
     }
+    // If measurement is not valid
     else {
-      Serial.println("Not a valid measurement. HR:" + String(heartRate) + " SPO2: " + String(spo2));
+      Serial.print("Not a valid measurement. HR: ");
+      Serial.print(heartRate);
+      Serial.print(" SPO2: ");
+      Serial.println(spo2);
       state = 2; // Try getting a reading again
     }
 
@@ -278,14 +305,19 @@ void loop() {
   // If we are posting data to the server
   if (state == 3) {
 
-      // String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": " + String(spo2) + "}";
-      String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": " + String(spo2) + ", \"time\": " + String(Time.format(Time.now(), TIME_FORMAT_ISO8601_FULL)) + "}";
+      String send_data = String("{ \"beat\": \"") + String(heartRate) + "\"" + ", \"ox\": \"" + String(spo2) + "\"" + ", \"time\": \"" + String(Time.format(Time.now(), TIME_FORMAT_ISO8601_FULL)) + "\"}";
       bool success = Particle.publish("Reading", String(send_data), PRIVATE);
       Serial.println(send_data);
 
       if (success) {
         // Transition to wait state
         state = 0;
+
+        // Update LED
+        blinkLED.setColor(RGB_COLOR_GREEN);
+        blinkLED.setSpeed(LED_SPEED_FAST);
+        blinkLED.setPattern(LED_PATTERN_BLINK);
+        delay(2000);
 
         // Update LED
         blinkLED.setColor(RGB_COLOR_GREEN);
@@ -296,17 +328,18 @@ void loop() {
         Serial.println("Data successfully sent.");
 
         // Try to send backed up data
-        uint8_t temp_storage = stored_data_points;
+        uint8_t temp_storage = stored_data.number_stored;
         for (uint8_t i = 0; i < temp_storage; i++) {
 
           // If data is less than 24 hours old
-          if ((millis() - when_stored[i]) < 24*60*60*1000) {
+          if ((millis() - stored_data.when_stored[i]) < 24*60*60*1000) {
 
-            success = success && Particle.publish("Reading", storage_buffer[i]);
+            success = success && Particle.publish("Reading", stored_data.buffer[i]);
 
             if (success) {
               // Yay!
-              Serial.println("Send stored point: " + String(storage_buffer[i]));
+              Serial.print("Sent stored point: ");
+              Serial.println(stored_data.buffer[i]);
             }
           }
           else {
@@ -315,16 +348,18 @@ void loop() {
         }
         if (success) {
           // If all were successful:
-          stored_data_points = 0;
+          stored_data.number_stored = 0;
           Serial.println("All stored data points sent.");
         }
       }
       else {
+        // Data failed to send
+
         // Save data to be transmitted later
         Serial.println("No internet - saving data for later.");
-        storage_buffer[stored_data_points] = send_data;
-        when_stored[stored_data_points] = millis();
-        stored_data_points++;
+        stored_data.buffer[stored_data.number_stored] = send_data;
+        stored_data.when_stored[stored_data.number_stored] = millis();
+        stored_data.number_stored++;
         state = 0;
 
          // Update LED
